@@ -1,66 +1,18 @@
-## Foundry
+# GreenStaker
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
+## Project is built with Foundry
 
 https://book.getfoundry.sh/
 
-## Usage
+## Assumptions
+1. The reward is the same token as the staked one. (If a user stakes token A, the token A will be given as reward)
+2. Users cannot stake again as long as they didn't claim
+3. All notice periods falls under the same pool as they all share the same yield interest of 5%
+4. The given stxw ERC20 tokens do not grant the right to request a withdrawal (If user A transfered his st1w token to user B, user B cannot claim the tokens of user A)
 
-### Build
 
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+## TO DO
+1. Write tests
+2. Allow users to stake more than 1 token
+3. Pause / Unpause feature
+4. claim NFT
