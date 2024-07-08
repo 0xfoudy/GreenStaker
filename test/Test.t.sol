@@ -113,7 +113,7 @@ contract GreenStakerTest is Test {
         stakerContract.deposit(token1Address, amountToDeposit, FIRST_NOTICE_ID);
         
         // Make sure UserInfo is updated
-        GreenStaker.UserInfo memory userInfo = stakerContract.getUserInfo(user1);
+        GreenStaker.UserInfo memory userInfo = stakerContract.getUserInfo(token1Address, user1);
         vm.assertEq(userInfo.balance, amountToDeposit);
         vm.assertEq(userInfo.noticePeriodId, FIRST_NOTICE_ID);
         vm.assertEq(userInfo.stakedAt, block.timestamp);
@@ -143,7 +143,7 @@ contract GreenStakerTest is Test {
         vm.assertEq(st1wERC20.balanceOf(user1), 0);
         vm.assertEq(st1wERC20.balanceOf(user2), 10**18);
         uint256 amountToDeposit = 50_000_000 * 10**18;
-        vm.assertEq(stakerContract.balanceOf(user1), amountToDeposit);
+        vm.assertEq(stakerContract.balanceOf(address(allowedToken1), user1), amountToDeposit);
     }
 
     /**
@@ -151,31 +151,35 @@ contract GreenStakerTest is Test {
     */
     function test_requestWithdraw() public {
         test_deposit();
-
+        address token1Address = address(allowedToken1);
         // cannot request withdraw without holding the stake token
         vm.startPrank(user1);
         IERC20(address(st1wERC20)).safeTransfer(user2, 10**18);
         vm.expectRevert("User not holding a stake token");
-        stakerContract.requestWithdraw();
+        stakerContract.requestWithdraw(token1Address);
         vm.stopPrank();
 
         // cannot request withdraw without having staked tokens despite having a stake token(st1w)
         vm.startPrank(user2);
         vm.expectRevert();
-        stakerContract.requestWithdraw(); // will revert without error because user has no mapping
+        stakerContract.requestWithdraw(token1Address); // will revert without error because user has no mapping
         IERC20(address(st1wERC20)).safeTransfer(user1, 10**18);
         vm.stopPrank();
 
         vm.startPrank(user1);
+
+        vm.expectRevert();
+        stakerContract.requestWithdraw(address(allowedToken2));
+
         uint256 st1wSupply = IERC20(address(st1wERC20)).totalSupply();
-        stakerContract.requestWithdraw();
+        stakerContract.requestWithdraw(token1Address);
         vm.stopPrank();
 
         // make sure the token was burned
         assertEq(IERC20(address(st1wERC20)).balanceOf(user1), 0);
         assertEq(IERC20(address(st1wERC20)).totalSupply(), st1wSupply - 1 * 10**18);
 
-        GreenStaker.UserInfo memory user = stakerContract.getUserInfo(user1);
+        GreenStaker.UserInfo memory user = stakerContract.getUserInfo(address(allowedToken1), user1);
         assertEq(user.withdrawalDate, block.timestamp + stakerContract.getNoticePeriodInfo(user.noticePeriodId).noticePeriod);
     }
 
@@ -187,12 +191,14 @@ contract GreenStakerTest is Test {
         test_deposit();
         vm.warp(15_778_800 + 1); // half a year leap
         vm.prank(user1);
-        stakerContract.requestWithdraw();
-        assertTrue(stakerContract.getUserInfo(user1).reward > stakerContract.getUserInfo(user1).balance * 5 / 200 - 10**15); // interest should be at 2.5%, precision loss of 0.5 at (10 ** 15)
+        stakerContract.requestWithdraw(address(allowedToken1));
+        GreenStaker.UserInfo memory user = stakerContract.getUserInfo(address(allowedToken1), user1);
+        uint256 userCurrentReward = user.reward;
+
+        assertTrue(userCurrentReward > user.balance * 5 / 200 - 10**15); // interest should be at 2.5%, precision loss of 0.5 at (10 ** 15)
         
-        uint256 userCurrentReward = stakerContract.getUserInfo(user1).reward;
         vm.warp(52 weeks); // 1 year leap, make sure the reward stays and isn't doubled or changed due to a withdrawal request already taking place
-        assertEq(stakerContract.getUserReward(stakerContract.getUserInfo(user1)), userCurrentReward);
+        assertEq(stakerContract.getUserReward(user), userCurrentReward);
     }
 
     function test_claim() public {
@@ -200,26 +206,28 @@ contract GreenStakerTest is Test {
         test_deposit();
         vm.warp(15_778_800 + 1); // half a year leap
         vm.startPrank(user1);
-        stakerContract.requestWithdraw();
-        GreenStaker.UserInfo memory user = stakerContract.getUserInfo(user1);
+
+        address token1Address = address(allowedToken1);
+        stakerContract.requestWithdraw(token1Address);
+        GreenStaker.UserInfo memory user = stakerContract.getUserInfo(token1Address, user1);
 
         uint256 userEarnedReward = user.reward;
         uint256 userStakedBalance = user.balance;
         uint256 userTokenBalance = allowedToken1.balanceOf(user1);
 
         vm.expectRevert("Cannot withdraw yet");
-        stakerContract.claim(address(allowedToken1));
-
-        vm.warp(15_778_800 + 1 + 7); // due to 1 week notice
+        stakerContract.claim(token1Address);
+        vm.warp(15_778_800 + 1 weeks + 1); // due to 1 week notice
         vm.expectRevert("Yield balance is not enough, admins must deposit yield");
-        stakerContract.claim(address(allowedToken1));
+        stakerContract.claim(token1Address);
         vm.stopPrank();
 
-        stakerContract.adminYieldDeposit(address(allowedToken1), 100_000_000 * 10**18);
+        allowedToken1.approve(address(stakerContract), type(uint256).max);
+        stakerContract.adminYieldDeposit(token1Address, 100_000_000 * 10**18);
         vm.prank(user1);
-        stakerContract.claim(address(allowedToken1));
+        stakerContract.claim(token1Address);
 
-        user = stakerContract.getUserInfo(user1);
+        user = stakerContract.getUserInfo(token1Address, user1);
         assertEq(user.reward, 0);
         assertEq(user.balance, 0);
         assertEq(allowedToken1.balanceOf(user1), userTokenBalance + userEarnedReward + userStakedBalance);

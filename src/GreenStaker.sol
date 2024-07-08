@@ -56,7 +56,8 @@ contract GreenStaker is Ownable{
 
     mapping(address => bool) public adminsMapping;
     mapping(address => RewardTokenInfo) public rewardTokensMapping;
-    mapping(address => UserInfo) public usersMapping;
+    // (tokenAddress => (userAddress => UserInfo))
+    mapping(address => mapping(address => UserInfo)) public usersMapping;
     mapping(uint8 => NoticePeriodInfo) noticePeriodsMapping;
 
     /**
@@ -123,13 +124,13 @@ contract GreenStaker is Ownable{
      * @notice deposit function lets users deposit a token to stake, it sets the user's parameters, transfers the specific notice token and takes the tokens to be staked.
      * @param _tokenAddress represents address of that token
      * @param _amount represents the amount to be deposited
-     * @param _noticePeriodId represents the notice period which the user chose to stake for
+     * @param _noticePeriodId represents the notice period which the user chose to stake for8u1
     */
     // TODO: allow users to deposit different tokens
     function deposit(address _tokenAddress, uint256 _amount, uint8 _noticePeriodId) public {
         require(rewardTokensMapping[_tokenAddress].isWhitelisted, "Deposited token not whitelisted");
 
-        UserInfo storage user = usersMapping[msg.sender];
+        UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
         require(user.balance == 0, "User already staking");
 
         user.balance = _amount;
@@ -153,15 +154,16 @@ contract GreenStaker is Ownable{
     }
 
     /**
-     * @notice requestWithdraw function allows the user to request a withdrawal, it sets the withdrawal date according to the noticeId, and burns the notice token
+    * @notice requestWithdraw function allows the user to request a withdrawal, it sets the withdrawal date according to the noticeId, and burns the notice token
+    * @param _tokenAddress represents address of that token
     */
     // TODO: make sure safeTransferFrom works with address(0) as destination
     // TODO: requestWithdraw per token
-    function requestWithdraw() public {
-        UserInfo storage user = usersMapping[msg.sender];
+    function requestWithdraw(address _tokenAddress) public {
+        UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
         NoticePeriodInfo memory noticePeriodInfo = noticePeriodsMapping[user.noticePeriodId];
         require(IERC20(noticePeriodInfo.withdrawalNoticeToken).balanceOf(msg.sender) > 0, "User not holding a stake token");
-        require(balanceOf(msg.sender) > 0, "User did not stake any token");
+        require(balanceOf(_tokenAddress, msg.sender) > 0, "User did not stake any token");
 
         user.reward = getUserReward(user);
         user.withdrawalDate = block.timestamp + noticePeriodInfo.noticePeriod;
@@ -175,8 +177,8 @@ contract GreenStaker is Ownable{
     * @param _tokenAddress represents address of that token
     */
     function claim(address _tokenAddress) public {
-        UserInfo storage user = usersMapping[msg.sender];
-        require(user.withdrawalDate >= block.timestamp, "Cannot withdraw yet");
+        UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
+        require(user.withdrawalDate <= block.timestamp, "Cannot withdraw yet");
         require(user.reward <= rewardTokensMapping[_tokenAddress].yieldBalance, "Yield balance is not enough, admins must deposit yield");
 
         rewardTokensMapping[_tokenAddress].yieldBalance -= user.reward;
@@ -189,11 +191,12 @@ contract GreenStaker is Ownable{
     }
 
     /**
-    * @notice balanceOf function lets users check the balance of an address
+    * @notice balanceOf function lets users check the token balance of an address
+    * @param _tokenAddress represents address of that token
     * @param _userAddress represents address of that user
     */
-    function balanceOf(address _userAddress) public view returns(uint256) {
-        return usersMapping[_userAddress].balance;
+    function balanceOf(address _tokenAddress, address _userAddress) public view returns(uint256) {
+        return usersMapping[_tokenAddress][_userAddress].balance;
     }
 
     /**
@@ -205,11 +208,12 @@ contract GreenStaker is Ownable{
     }
 
     /**
-    * @notice getUserInfo function returns the UserInfo struct
+    * @notice getUserInfo function returns the UserInfo struct for a specific token
+    * @param _tokenAddress represents address of that token
     * @param _userAddress represents address of that user
     */
-    function getUserInfo(address _userAddress) public view returns(UserInfo memory) {
-        return usersMapping[_userAddress];
+    function getUserInfo(address _tokenAddress, address _userAddress) public view returns(UserInfo memory) {
+        return usersMapping[_tokenAddress][_userAddress];
     }
 
     /**
