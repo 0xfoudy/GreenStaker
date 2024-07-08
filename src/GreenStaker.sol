@@ -57,8 +57,7 @@ contract GreenStaker is Ownable, Pausable{
 
     mapping(address => bool) public adminsMapping;
     mapping(address => RewardTokenInfo) public rewardTokensMapping;
-    // (tokenAddress => (userAddress => UserInfo))
-    mapping(address => mapping(address => UserInfo)) public usersMapping;
+    mapping(address => mapping(address => UserInfo)) public usersMapping; // (tokenAddress => (userAddress => UserInfo))
     mapping(uint8 => NoticePeriodInfo) noticePeriodsMapping;
 
     uint256 pausedAt;
@@ -179,19 +178,25 @@ contract GreenStaker is Ownable, Pausable{
     function requestWithdraw(address _tokenAddress) public whenNotPaused {
         UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
         NoticePeriodInfo memory noticePeriodInfo = noticePeriodsMapping[user.noticePeriodId];
-        require(IERC20(noticePeriodInfo.withdrawalNoticeToken).balanceOf(msg.sender) > 0, "User not holding a stake token");
+        uint8 tokenDecimals = TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).decimals();
+
+        require(IERC20(noticePeriodInfo.withdrawalNoticeToken).balanceOf(msg.sender) >= 1 * 10**tokenDecimals, "User not holding a stake token");
         require(balanceOf(_tokenAddress, msg.sender) > 0, "User did not stake any token");
 
         user.reward = getUserReward(user);
         user.requestedWithdrawalAt = block.timestamp;
-        uint8 tokenDecimals = TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).decimals();
         TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).burn(msg.sender, 1 * 10**tokenDecimals);
 
         uint256 nftId = withdrawalNFT.mintNFT(msg.sender);
         user.withdrawalNFTId = nftId;
     }
 
-    function isAllowedToClaim(uint256 _requestedWithdrawDate, uint8 _noticePeriodId) public returns(bool){
+    /**
+    * @notice isAllowedToClaim function returns whether a date is valid for claim or not yet based on the corresponding notice period
+    * @param _requestedWithdrawDate represents the date at which the request was made
+    * @param _noticePeriodId represents the ID of the notice period
+    */
+    function isAllowedToClaim(uint256 _requestedWithdrawDate, uint8 _noticePeriodId) public view returns(bool){
         return _requestedWithdrawDate + noticePeriodsMapping[_noticePeriodId].noticePeriod <= block.timestamp;
     }
 

@@ -102,6 +102,12 @@ contract GreenStakerTest is Test {
         deal(address(st1wERC20), address(stakerContract), amountToDeal);
         deal(address(st4wERC20), address(stakerContract), amountToDeal);
 
+        // test fail on pause
+        stakerContract.pause();
+        vm.expectRevert();
+        stakerContract.deposit(token1Address, amountToDeposit, FIRST_NOTICE_ID);
+        stakerContract.unpause();
+
         vm.startPrank(user1);
         allowedToken1.approve(address(stakerContract), type(uint256).max);
 
@@ -154,6 +160,13 @@ contract GreenStakerTest is Test {
     function test_requestWithdraw() public {
         test_deposit();
         address token1Address = address(allowedToken1);
+
+        // test fail on pause
+        stakerContract.pause();
+        vm.expectRevert();
+        stakerContract.requestWithdraw(token1Address);
+        stakerContract.unpause();
+        
         // cannot request withdraw without holding the stake token
         vm.startPrank(user1);
         IERC20(address(st1wERC20)).safeTransfer(user2, 10**18);
@@ -238,6 +251,12 @@ contract GreenStakerTest is Test {
         // make sure the NFT existed
         assertEq(NFTContract.ownerOf(1), user1);
 
+        // test fail on pause
+        stakerContract.pause();
+        vm.expectRevert();
+        stakerContract.claim(token1Address);
+        stakerContract.unpause();
+        
         vm.prank(user1);
         stakerContract.claim(token1Address);
 
