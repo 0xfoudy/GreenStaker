@@ -183,7 +183,7 @@ contract GreenStakerTest is Test {
 
         vm.startPrank(user1);
 
-        vm.expectRevert();
+        vm.expectRevert("User did not stake that token");
         stakerContract.requestWithdraw(address(allowedToken2));
 
         uint256 st1wSupply = IERC20(address(st1wERC20)).totalSupply();

@@ -176,12 +176,12 @@ contract GreenStaker is Ownable, Pausable{
     * @param _tokenAddress represents address of that token
     */
     function requestWithdraw(address _tokenAddress) public whenNotPaused {
+        require(balanceOf(_tokenAddress, msg.sender) > 0, "User did not stake that token");
         UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
         NoticePeriodInfo memory noticePeriodInfo = noticePeriodsMapping[user.noticePeriodId];
         uint8 tokenDecimals = TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).decimals();
 
         require(IERC20(noticePeriodInfo.withdrawalNoticeToken).balanceOf(msg.sender) >= 1 * 10**tokenDecimals, "User not holding a stake token");
-        require(balanceOf(_tokenAddress, msg.sender) > 0, "User did not stake any token");
 
         user.reward = getUserReward(user);
         user.requestedWithdrawalAt = block.timestamp;
