@@ -4,11 +4,12 @@ pragma solidity 0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./TemplateERC20.sol";
-import "forge-std/console.sol";
+import "./WithdrawalNFT.sol";
 
 
-contract GreenStaker is Ownable{
+contract GreenStaker is Ownable, Pausable{
     using SafeERC20 for IERC20;
 
     // rewards are 5% per year which is equivalent to (5 / 365.25 * 24 * 60 * 60) = 1.58440439 * 10 ** -9
@@ -21,6 +22,7 @@ contract GreenStaker is Ownable{
      * @param stakedAt represents the timestamp at which the user staked
      * @param reward represents the reward accumulated until the claim request
      * @param requestedWithdrawalAt represents the date at which the user requested a withdrawal, used to stop the reward calculations once a request takes place
+     * @param withdrawalNFTId represents the NFT Id given at withdrawal request
      * @param noticePeriodId represents the notice period which the user chose to stake for
     */
     struct UserInfo {
@@ -28,6 +30,7 @@ contract GreenStaker is Ownable{
         uint256 stakedAt;
         uint256 reward;
         uint256 requestedWithdrawalAt;
+        uint256 withdrawalNFTId;
         uint8 noticePeriodId;
     }
 
@@ -58,12 +61,16 @@ contract GreenStaker is Ownable{
     mapping(address => mapping(address => UserInfo)) public usersMapping;
     mapping(uint8 => NoticePeriodInfo) noticePeriodsMapping;
 
+    uint256 pausedAt;
+    WithdrawalNFT public withdrawalNFT;
+
     /**
      * @notice constructor used to initialize the contract
      * @param _st1wToken is the address of the first notice token (1 week)
      * @param _st4wToken is the address of the second notice token (4 weeks)
+     * @param _withdrawalNFTAddress is the address of the withdrawal NFT contract
     */
-    constructor(address _st1wToken, address _st4wToken) Ownable(msg.sender) {
+    constructor(address _st1wToken, address _st4wToken, address _withdrawalNFTAddress) Ownable(msg.sender) {
         adminsMapping[msg.sender] = true;
 
         noticePeriodsMapping[1].noticePeriod = 1 weeks;
@@ -71,11 +78,27 @@ contract GreenStaker is Ownable{
 
         noticePeriodsMapping[2].noticePeriod = 4 weeks;
         noticePeriodsMapping[2].withdrawalNoticeToken = _st4wToken;
+
+        withdrawalNFT = WithdrawalNFT(_withdrawalNFTAddress);
     }
 
     modifier onlyAdmin {
         require(adminsMapping[msg.sender], "User not admin");
         _;
+    }
+
+    /**
+    * @notice pause allows the owner to pause the contract
+    */
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    /**
+    * @notice unpause allows the owner to unpause the contract
+    */
+    function unpause() public onlyOwner {
+        _unpause();
     }
 
     /**
@@ -124,7 +147,7 @@ contract GreenStaker is Ownable{
      * @param _amount represents the amount to be deposited
      * @param _noticePeriodId represents the notice period which the user chose to stake for8u1
     */
-    function deposit(address _tokenAddress, uint256 _amount, uint8 _noticePeriodId) public {
+    function deposit(address _tokenAddress, uint256 _amount, uint8 _noticePeriodId) public whenNotPaused {
         require(rewardTokensMapping[_tokenAddress].isWhitelisted, "Deposited token not whitelisted");
 
         UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
@@ -153,7 +176,7 @@ contract GreenStaker is Ownable{
     * @notice requestWithdraw function allows the user to request a withdrawal, it sets the withdrawal date according to the noticeId, and burns the notice token
     * @param _tokenAddress represents address of that token
     */
-    function requestWithdraw(address _tokenAddress) public {
+    function requestWithdraw(address _tokenAddress) public whenNotPaused {
         UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
         NoticePeriodInfo memory noticePeriodInfo = noticePeriodsMapping[user.noticePeriodId];
         require(IERC20(noticePeriodInfo.withdrawalNoticeToken).balanceOf(msg.sender) > 0, "User not holding a stake token");
@@ -163,6 +186,9 @@ contract GreenStaker is Ownable{
         user.requestedWithdrawalAt = block.timestamp;
         uint8 tokenDecimals = TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).decimals();
         TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).burn(msg.sender, 1 * 10**tokenDecimals);
+
+        uint256 nftId = withdrawalNFT.mintNFT(msg.sender);
+        user.withdrawalNFTId = nftId;
     }
 
     function isAllowedToClaim(uint256 _requestedWithdrawDate, uint8 _noticePeriodId) public returns(bool){
@@ -173,7 +199,7 @@ contract GreenStaker is Ownable{
     * @notice claim function makes sure the user's notice period has passed and transfers the earned reward + initially staked tokens and updates the balances
     * @param _tokenAddress represents address of that token
     */
-    function claim(address _tokenAddress) public {
+    function claim(address _tokenAddress) public whenNotPaused {
         UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
         require(isAllowedToClaim(user.requestedWithdrawalAt, user.noticePeriodId), "Cannot withdraw yet");
         require(user.reward <= rewardTokensMapping[_tokenAddress].yieldBalance, "Yield balance is not enough, admins must deposit yield");
@@ -184,6 +210,10 @@ contract GreenStaker is Ownable{
         user.balance = 0;
         user.reward = 0;
         user.requestedWithdrawalAt = 0;
+
+        uint256 nftId = user.withdrawalNFTId;
+        user.withdrawalNFTId = 0;
+        withdrawalNFT.burnNFT(nftId);
         IERC20(_tokenAddress).safeTransfer(msg.sender, totalToTransfer);
     }
 

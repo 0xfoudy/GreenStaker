@@ -5,7 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {TemplateERC20} from "../src/TemplateERC20.sol";
 import {GreenStaker} from "../src/GreenStaker.sol";
-import "forge-std/console.sol";
+import {WithdrawalNFT} from "../src/WithdrawalNFT.sol";
 
 contract GreenStakerTest is Test {
     using SafeERC20 for IERC20;
@@ -25,6 +25,7 @@ contract GreenStakerTest is Test {
     TemplateERC20 st4wERC20;
 
     GreenStaker public stakerContract;
+    WithdrawalNFT public NFTContract;
 
     function setUp() public {
         // create the tokens
@@ -33,9 +34,10 @@ contract GreenStakerTest is Test {
         unallowedToken1 = new TemplateERC20(TOTAL_SUPPLY, "Token3", "TKN3");
         st1wERC20 = new TemplateERC20(TOTAL_SUPPLY, "st1wERC20", "st1w");
         st4wERC20 = new TemplateERC20(TOTAL_SUPPLY, "st4wERC20", "st4w");
-
+        NFTContract = new WithdrawalNFT();
         // create the smart contract
-        stakerContract = new GreenStaker(address(st1wERC20), address(st4wERC20));
+        stakerContract = new GreenStaker(address(st1wERC20), address(st4wERC20), address(NFTContract));
+        NFTContract.transferOwnership(address(stakerContract));
     }
 
     /**
@@ -175,9 +177,11 @@ contract GreenStakerTest is Test {
         stakerContract.requestWithdraw(token1Address);
         vm.stopPrank();
 
-        // make sure the token was burned
         assertEq(IERC20(address(st1wERC20)).balanceOf(user1), 0);
         assertEq(IERC20(address(st1wERC20)).totalSupply(), st1wSupply - 1 * 10**18);
+        
+        // make sure the NFT was minted
+        assertEq(NFTContract.ownerOf(1), user1);
 
         GreenStaker.UserInfo memory user = stakerContract.getUserInfo(address(allowedToken1), user1);
         assertEq(user.requestedWithdrawalAt, block.timestamp);
@@ -230,8 +234,16 @@ contract GreenStakerTest is Test {
 
         allowedToken1.approve(address(stakerContract), type(uint256).max);
         stakerContract.adminYieldDeposit(token1Address, 100_000_000 * 10**18);
+
+        // make sure the NFT existed
+        assertEq(NFTContract.ownerOf(1), user1);
+
         vm.prank(user1);
         stakerContract.claim(token1Address);
+
+        // make sure the NFT existed
+        vm.expectRevert();
+        NFTContract.ownerOf(1);
 
         user = stakerContract.getUserInfo(token1Address, user1);
         assertEq(user.reward, 0);
