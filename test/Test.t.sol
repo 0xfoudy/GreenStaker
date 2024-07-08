@@ -180,7 +180,10 @@ contract GreenStakerTest is Test {
         assertEq(IERC20(address(st1wERC20)).totalSupply(), st1wSupply - 1 * 10**18);
 
         GreenStaker.UserInfo memory user = stakerContract.getUserInfo(address(allowedToken1), user1);
-        assertEq(user.withdrawalDate, block.timestamp + stakerContract.getNoticePeriodInfo(user.noticePeriodId).noticePeriod);
+        assertEq(user.requestedWithdrawalAt, block.timestamp);
+        assertFalse(stakerContract.isAllowedToClaim(user.requestedWithdrawalAt, user.noticePeriodId));
+        vm.warp(block.timestamp + stakerContract.getNoticePeriodInfo(user.noticePeriodId).noticePeriod);
+        assertTrue(stakerContract.isAllowedToClaim(user.requestedWithdrawalAt, user.noticePeriodId));
     }
 
     /**
@@ -201,6 +204,9 @@ contract GreenStakerTest is Test {
         assertEq(stakerContract.getUserReward(user), userCurrentReward);
     }
 
+    /**
+    * @notice test_claim function checks that the user can claim his tokens and rewards and that balances are updated properly
+    */
     function test_claim() public {
         vm.warp(1);
         test_deposit();
@@ -231,5 +237,16 @@ contract GreenStakerTest is Test {
         assertEq(user.reward, 0);
         assertEq(user.balance, 0);
         assertEq(allowedToken1.balanceOf(user1), userTokenBalance + userEarnedReward + userStakedBalance);
+    }
+
+    function test_modifyNoticePeriod() public {
+        test_requestWithdraw();
+        GreenStaker.UserInfo memory user = stakerContract.getUserInfo(address(allowedToken1), user1);
+        assertTrue(stakerContract.isAllowedToClaim(user.requestedWithdrawalAt, user.noticePeriodId));
+
+        stakerContract.adminModifyNoticePeriod(user.noticePeriodId, 8 weeks);
+        assertFalse(stakerContract.isAllowedToClaim(user.requestedWithdrawalAt, user.noticePeriodId));
+        vm.warp(block.timestamp + 8 weeks);
+        assertTrue(stakerContract.isAllowedToClaim(user.requestedWithdrawalAt, user.noticePeriodId));
     }
 }

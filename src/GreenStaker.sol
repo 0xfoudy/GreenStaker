@@ -21,7 +21,6 @@ contract GreenStaker is Ownable{
      * @param stakedAt represents the timestamp at which the user staked
      * @param reward represents the reward accumulated until the claim request
      * @param requestedWithdrawalAt represents the date at which the user requested a withdrawal, used to stop the reward calculations once a request takes place
-     * @param withdrawalDate represents the date at which the user is allowed to withdraw
      * @param noticePeriodId represents the notice period which the user chose to stake for
     */
     struct UserInfo {
@@ -29,7 +28,6 @@ contract GreenStaker is Ownable{
         uint256 stakedAt;
         uint256 reward;
         uint256 requestedWithdrawalAt;
-        uint256 withdrawalDate;
         uint8 noticePeriodId;
     }
 
@@ -126,7 +124,6 @@ contract GreenStaker is Ownable{
      * @param _amount represents the amount to be deposited
      * @param _noticePeriodId represents the notice period which the user chose to stake for8u1
     */
-    // TODO: allow users to deposit different tokens
     function deposit(address _tokenAddress, uint256 _amount, uint8 _noticePeriodId) public {
         require(rewardTokensMapping[_tokenAddress].isWhitelisted, "Deposited token not whitelisted");
 
@@ -146,7 +143,6 @@ contract GreenStaker is Ownable{
      * @notice getUserReward function calculates the users rewards
      * @param _user represents user to have his rewards calculated
     */
-    // TODO: get user rewards per token
     function getUserReward(UserInfo memory _user) public view returns(uint256) {
         uint256 userCurrentTimestamp = _user.requestedWithdrawalAt;
         if(_user.requestedWithdrawalAt == 0) userCurrentTimestamp = block.timestamp;
@@ -157,8 +153,6 @@ contract GreenStaker is Ownable{
     * @notice requestWithdraw function allows the user to request a withdrawal, it sets the withdrawal date according to the noticeId, and burns the notice token
     * @param _tokenAddress represents address of that token
     */
-    // TODO: make sure safeTransferFrom works with address(0) as destination
-    // TODO: requestWithdraw per token
     function requestWithdraw(address _tokenAddress) public {
         UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
         NoticePeriodInfo memory noticePeriodInfo = noticePeriodsMapping[user.noticePeriodId];
@@ -166,10 +160,13 @@ contract GreenStaker is Ownable{
         require(balanceOf(_tokenAddress, msg.sender) > 0, "User did not stake any token");
 
         user.reward = getUserReward(user);
-        user.withdrawalDate = block.timestamp + noticePeriodInfo.noticePeriod;
         user.requestedWithdrawalAt = block.timestamp;
         uint8 tokenDecimals = TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).decimals();
         TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).burn(msg.sender, 1 * 10**tokenDecimals);
+    }
+
+    function isAllowedToClaim(uint256 _requestedWithdrawDate, uint8 _noticePeriodId) public returns(bool){
+        return _requestedWithdrawDate + noticePeriodsMapping[_noticePeriodId].noticePeriod <= block.timestamp;
     }
 
     /**
@@ -178,7 +175,7 @@ contract GreenStaker is Ownable{
     */
     function claim(address _tokenAddress) public {
         UserInfo storage user = usersMapping[_tokenAddress][msg.sender];
-        require(user.withdrawalDate <= block.timestamp, "Cannot withdraw yet");
+        require(isAllowedToClaim(user.requestedWithdrawalAt, user.noticePeriodId), "Cannot withdraw yet");
         require(user.reward <= rewardTokensMapping[_tokenAddress].yieldBalance, "Yield balance is not enough, admins must deposit yield");
 
         rewardTokensMapping[_tokenAddress].yieldBalance -= user.reward;

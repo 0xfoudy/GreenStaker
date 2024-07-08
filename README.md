@@ -14,7 +14,7 @@ https://book.getfoundry.sh/
 
 ## TO DO
 1. Write tests X
-2. Allow users to stake more than 1 token
+2. Allow users to stake more than 1 token X 
 3. Pause / Unpause feature
 4. claim NFT
 5. test admin modifying claim periods
