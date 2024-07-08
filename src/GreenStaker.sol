@@ -4,6 +4,9 @@ pragma solidity 0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./TemplateERC20.sol";
+import "forge-std/console.sol";
+
 
 contract GreenStaker is Ownable{
     using SafeERC20 for IERC20;
@@ -17,6 +20,7 @@ contract GreenStaker is Ownable{
      * @param balance represents how much the user has staked
      * @param stakedAt represents the timestamp at which the user staked
      * @param reward represents the reward accumulated until the claim request
+     * @param requestedWithdrawalAt represents the date at which the user requested a withdrawal, used to stop the reward calculations once a request takes place
      * @param withdrawalDate represents the date at which the user is allowed to withdraw
      * @param noticePeriodId represents the notice period which the user chose to stake for
     */
@@ -24,6 +28,7 @@ contract GreenStaker is Ownable{
         uint256 balance;
         uint256 stakedAt;
         uint256 reward;
+        uint256 requestedWithdrawalAt;
         uint256 withdrawalDate;
         uint8 noticePeriodId;
     }
@@ -35,6 +40,7 @@ contract GreenStaker is Ownable{
     */
     struct RewardTokenInfo {
         uint256 yieldBalance;
+        uint256 lastDepositDate;
         bool isWhitelisted;
     }
 
@@ -69,8 +75,17 @@ contract GreenStaker is Ownable{
     }
 
     modifier onlyAdmin {
-        require(adminsMapping[msg.sender]);
+        require(adminsMapping[msg.sender], "User not admin");
         _;
+    }
+
+    /**
+    * @notice setAdmin function modifies the admin status of an address
+    * @param _userAddress represents address of that token
+    * @param _isAdmin represents the admin status to be set
+    */
+    function setAdmin(address _userAddress, bool _isAdmin) public onlyOwner {
+        adminsMapping[_userAddress] = _isAdmin;
     }
 
     /**
@@ -88,7 +103,10 @@ contract GreenStaker is Ownable{
      * @param _amount represents the amount to be deposited
     */
     function adminYieldDeposit(address _tokenAddress, uint256 _amount) public onlyAdmin {
-        rewardTokensMapping[_tokenAddress].yieldBalance += _amount;
+        RewardTokenInfo storage rewardToken = rewardTokensMapping[_tokenAddress];
+        require(rewardToken.lastDepositDate == 0 || rewardToken.lastDepositDate + 1 weeks <= block.timestamp, "Not enough time passed since last deposit");
+        rewardToken.yieldBalance += _amount;
+        rewardToken.lastDepositDate = block.timestamp;
         IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
@@ -112,13 +130,14 @@ contract GreenStaker is Ownable{
         require(rewardTokensMapping[_tokenAddress].isWhitelisted, "Deposited token not whitelisted");
 
         UserInfo storage user = usersMapping[msg.sender];
-        require(user.balance > 0, "User already staking");
+        require(user.balance == 0, "User already staking");
 
         user.balance = _amount;
         user.stakedAt = block.timestamp;
         user.noticePeriodId = _noticePeriodId;
 
-        IERC20(noticePeriodsMapping[_noticePeriodId].withdrawalNoticeToken).safeTransfer(msg.sender, 1);
+        uint8 tokenDecimals = TemplateERC20(noticePeriodsMapping[_noticePeriodId].withdrawalNoticeToken).decimals();
+        IERC20(noticePeriodsMapping[_noticePeriodId].withdrawalNoticeToken).safeTransfer(msg.sender, 1 * 10**tokenDecimals);
         IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
@@ -127,8 +146,10 @@ contract GreenStaker is Ownable{
      * @param _user represents user to have his rewards calculated
     */
     // TODO: get user rewards per token
-    function getUserReward(UserInfo memory _user) internal pure returns(uint256) {
-        return (_user.balance * _user.stakedAt * REWARDS_PER_SECOND_NUMERATOR) / REWARDS_PER_SECOND_DENOMINATOR;
+    function getUserReward(UserInfo memory _user) public view returns(uint256) {
+        uint256 userCurrentTimestamp = _user.requestedWithdrawalAt;
+        if(_user.requestedWithdrawalAt == 0) userCurrentTimestamp = block.timestamp;
+        return (_user.balance * (userCurrentTimestamp - _user.stakedAt) * REWARDS_PER_SECOND_NUMERATOR) / REWARDS_PER_SECOND_DENOMINATOR;
     }
 
     /**
@@ -139,23 +160,31 @@ contract GreenStaker is Ownable{
     function requestWithdraw() public {
         UserInfo storage user = usersMapping[msg.sender];
         NoticePeriodInfo memory noticePeriodInfo = noticePeriodsMapping[user.noticePeriodId];
+        require(IERC20(noticePeriodInfo.withdrawalNoticeToken).balanceOf(msg.sender) > 0, "User not holding a stake token");
+        require(balanceOf(msg.sender) > 0, "User did not stake any token");
 
         user.reward = getUserReward(user);
         user.withdrawalDate = block.timestamp + noticePeriodInfo.noticePeriod;
-        IERC20(noticePeriodInfo.withdrawalNoticeToken).safeTransferFrom(msg.sender, address(0),1);
+        user.requestedWithdrawalAt = block.timestamp;
+        uint8 tokenDecimals = TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).decimals();
+        TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).burn(msg.sender, 1 * 10**tokenDecimals);
     }
 
     /**
-    * @notice claim function makes sure the user's notice period has passed and transfers the earned reward + initially staked tokens
+    * @notice claim function makes sure the user's notice period has passed and transfers the earned reward + initially staked tokens and updates the balances
     * @param _tokenAddress represents address of that token
     */
     function claim(address _tokenAddress) public {
         UserInfo storage user = usersMapping[msg.sender];
         require(user.withdrawalDate >= block.timestamp, "Cannot withdraw yet");
-        
+        require(user.reward <= rewardTokensMapping[_tokenAddress].yieldBalance, "Yield balance is not enough, admins must deposit yield");
+
+        rewardTokensMapping[_tokenAddress].yieldBalance -= user.reward;
+
         uint256 totalToTransfer = user.balance + user.reward;
         user.balance = 0;
         user.reward = 0;
+        user.requestedWithdrawalAt = 0;
         IERC20(_tokenAddress).safeTransfer(msg.sender, totalToTransfer);
     }
 
@@ -165,5 +194,37 @@ contract GreenStaker is Ownable{
     */
     function balanceOf(address _userAddress) public view returns(uint256) {
         return usersMapping[_userAddress].balance;
+    }
+
+    /**
+    * @notice getRewardTokenInfo function returns the RewardTokenInfo struct
+    * @param _tokenAddress represents address of that token
+    */
+    function getRewardTokenInfo(address _tokenAddress) public view returns(RewardTokenInfo memory) {
+        return rewardTokensMapping[_tokenAddress];
+    }
+
+    /**
+    * @notice getUserInfo function returns the UserInfo struct
+    * @param _userAddress represents address of that user
+    */
+    function getUserInfo(address _userAddress) public view returns(UserInfo memory) {
+        return usersMapping[_userAddress];
+    }
+
+    /**
+    * @notice getNoticeInfo function returns the NoticePeriod struct
+    * @param _noticePeriodId represents notice periodId
+    */
+    function getNoticePeriodInfo(uint8 _noticePeriodId) public view returns(NoticePeriodInfo memory) {
+        return noticePeriodsMapping[_noticePeriodId];
+    }
+
+    /**
+    * @notice isAdmin function returns the admin status of a user
+    * @param _userAddress represents address of that user
+    */
+    function isAdmin(address _userAddress) public view returns(bool) {
+        return adminsMapping[_userAddress];
     }
 }
