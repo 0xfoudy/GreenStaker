@@ -16,3 +16,5 @@ https://book.getfoundry.sh/
 2. Use access control if there's more than 1 Role
 3. Let pause stop reward calculation
 4. Grant NFT instead of ERC20 to transfer stake ownership along with the stake token => liquid stake
+5. Coverage report (Forge coverage) at 93.75%, 1 branch left to cover
+6. Clean slither report

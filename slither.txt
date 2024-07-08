@@ -1,0 +1,228 @@
+INFO:Detectors:
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) has bitwise-xor operator ^ instead of the exponentiation operator **: 
+         - inverse = (3 * denominator) ^ 2 (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#184)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#incorrect-exponentiation
+INFO:Detectors:
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) performs a multiplication on the result of a division:
+        - denominator = denominator / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#169)
+        - inverse = (3 * denominator) ^ 2 (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#184)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) performs a multiplication on the result of a division:
+        - denominator = denominator / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#169)
+        - inverse *= 2 - denominator * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#188)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) performs a multiplication on the result of a division:
+        - denominator = denominator / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#169)
+        - inverse *= 2 - denominator * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#189)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) performs a multiplication on the result of a division:
+        - denominator = denominator / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#169)
+        - inverse *= 2 - denominator * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#190)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) performs a multiplication on the result of a division:
+        - denominator = denominator / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#169)
+        - inverse *= 2 - denominator * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#191)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) performs a multiplication on the result of a division:
+        - denominator = denominator / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#169)
+        - inverse *= 2 - denominator * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#192)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) performs a multiplication on the result of a division:
+        - denominator = denominator / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#169)
+        - inverse *= 2 - denominator * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#193)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) performs a multiplication on the result of a division:
+        - prod0 = prod0 / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#172)
+        - result = prod0 * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#199)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#divide-before-multiply
+INFO:Detectors:
+Reentrancy in GreenStaker.requestWithdraw(address) (src/GreenStaker.sol#178-192):
+        External calls:
+        - TemplateERC20(noticePeriodInfo.withdrawalNoticeToken).burn(msg.sender,1 * 10 ** tokenDecimals) (src/GreenStaker.sol#188)
+        - nftId = withdrawalNFT.mintNFT(msg.sender) (src/GreenStaker.sol#190)
+        State variables written after the call(s):
+        - user.withdrawalNFTId = nftId (src/GreenStaker.sol#191)
+        GreenStaker.usersMapping (src/GreenStaker.sol#60) can be used in cross function reentrancies:
+        - GreenStaker.balanceOf(address,address) (src/GreenStaker.sol#230-232)
+        - GreenStaker.claim(address) (src/GreenStaker.sol#207-223)
+        - GreenStaker.deposit(address,uint256,uint8) (src/GreenStaker.sol#149-162)
+        - GreenStaker.getUserInfo(address,address) (src/GreenStaker.sol#247-249)
+        - GreenStaker.requestWithdraw(address) (src/GreenStaker.sol#178-192)
+        - GreenStaker.usersMapping (src/GreenStaker.sol#60)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-1
+INFO:Detectors:
+TemplateERC20.constructor(uint256,string,string)._name (src/TemplateERC20.sol#7) shadows:
+        - ERC20._name (lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol#41) (state variable)
+TemplateERC20.constructor(uint256,string,string)._symbol (src/TemplateERC20.sol#7) shadows:
+        - ERC20._symbol (lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol#42) (state variable)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#local-variable-shadowing
+INFO:Detectors:
+GreenStaker.adminYieldDeposit(address,uint256) (src/GreenStaker.sol#126-132) uses timestamp for comparisons
+        Dangerous comparisons:
+        - require(bool,string)(rewardToken.lastDepositDate == 0 || rewardToken.lastDepositDate + 604800 <= block.timestamp,Not enough time passed since last deposit) (src/GreenStaker.sol#128)
+GreenStaker.deposit(address,uint256,uint8) (src/GreenStaker.sol#149-162) uses timestamp for comparisons
+        Dangerous comparisons:
+        - require(bool,string)(rewardTokensMapping[_tokenAddress].isWhitelisted,Deposited token not whitelisted) (src/GreenStaker.sol#150)
+        - require(bool,string)(user.balance == 0,User already staking) (src/GreenStaker.sol#153)
+GreenStaker.requestWithdraw(address) (src/GreenStaker.sol#178-192) uses timestamp for comparisons
+        Dangerous comparisons:
+        - require(bool,string)(balanceOf(_tokenAddress,msg.sender) > 0,User did not stake any token) (src/GreenStaker.sol#184)
+GreenStaker.isAllowedToClaim(uint256,uint8) (src/GreenStaker.sol#199-201) uses timestamp for comparisons
+        Dangerous comparisons:
+        - _requestedWithdrawDate + noticePeriodsMapping[_noticePeriodId].noticePeriod <= block.timestamp (src/GreenStaker.sol#200)
+GreenStaker.claim(address) (src/GreenStaker.sol#207-223) uses timestamp for comparisons
+        Dangerous comparisons:
+        - require(bool,string)(user.reward <= rewardTokensMapping[_tokenAddress].yieldBalance,Yield balance is not enough, admins must deposit yield) (src/GreenStaker.sol#210)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
+INFO:Detectors:
+ERC721._checkOnERC721Received(address,address,uint256,bytes) (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#465-482) uses assembly
+        - INLINE ASM (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#476-478)
+Address._revert(bytes) (lib/openzeppelin-contracts/contracts/utils/Address.sol#146-158) uses assembly
+        - INLINE ASM (lib/openzeppelin-contracts/contracts/utils/Address.sol#151-154)
+Strings.toString(uint256) (lib/openzeppelin-contracts/contracts/utils/Strings.sol#24-44) uses assembly
+        - INLINE ASM (lib/openzeppelin-contracts/contracts/utils/Strings.sol#30-32)
+        - INLINE ASM (lib/openzeppelin-contracts/contracts/utils/Strings.sol#36-38)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) uses assembly
+        - INLINE ASM (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#130-133)
+        - INLINE ASM (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#154-161)
+        - INLINE ASM (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#167-176)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#assembly-usage
+INFO:Detectors:
+Different versions of Solidity are used:
+        - Version used: ['0.8.20', '^0.8.20']
+        - 0.8.20 (src/GreenStaker.sol#2)
+        - 0.8.20 (src/TemplateERC20.sol#2)
+        - 0.8.20 (src/WithdrawalNFT.sol#2)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/access/Ownable.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol#3)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC721/IERC721.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/Address.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/Context.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/Pausable.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/Strings.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#4)
+        - ^0.8.20 (lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol#4)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#different-pragma-directives-are-used
+INFO:Detectors:
+Address.functionDelegateCall(address,bytes) (lib/openzeppelin-contracts/contracts/utils/Address.sol#104-107) is never used and should be removed
+Address.functionStaticCall(address,bytes) (lib/openzeppelin-contracts/contracts/utils/Address.sol#95-98) is never used and should be removed
+Address.sendValue(address,uint256) (lib/openzeppelin-contracts/contracts/utils/Address.sol#41-50) is never used and should be removed
+Address.verifyCallResult(bool,bytes) (lib/openzeppelin-contracts/contracts/utils/Address.sol#135-141) is never used and should be removed
+Context._contextSuffixLength() (lib/openzeppelin-contracts/contracts/utils/Context.sol#25-27) is never used and should be removed
+Context._msgData() (lib/openzeppelin-contracts/contracts/utils/Context.sol#21-23) is never used and should be removed
+ERC721._increaseBalance(address,uint128) (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#224-228) is never used and should be removed
+ERC721._safeMint(address,uint256) (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#304-306) is never used and should be removed
+ERC721._safeMint(address,uint256,bytes) (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#312-315) is never used and should be removed
+ERC721._safeTransfer(address,address,uint256) (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#377-379) is never used and should be removed
+ERC721._safeTransfer(address,address,uint256,bytes) (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#385-388) is never used and should be removed
+ERC721._transfer(address,address,uint256) (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#346-356) is never used and should be removed
+Math.average(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#96-99) is never used and should be removed
+Math.ceilDiv(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#107-115) is never used and should be removed
+Math.log10(uint256,Math.Rounding) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#359-364) is never used and should be removed
+Math.log2(uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#268-304) is never used and should be removed
+Math.log2(uint256,Math.Rounding) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#310-315) is never used and should be removed
+Math.log256(uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#372-396) is never used and should be removed
+Math.log256(uint256,Math.Rounding) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#402-407) is never used and should be removed
+Math.max(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#81-83) is never used and should be removed
+Math.min(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#88-90) is never used and should be removed
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#123-202) is never used and should be removed
+Math.mulDiv(uint256,uint256,uint256,Math.Rounding) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#207-213) is never used and should be removed
+Math.sqrt(uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#221-252) is never used and should be removed
+Math.sqrt(uint256,Math.Rounding) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#257-262) is never used and should be removed
+Math.tryAdd(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#25-31) is never used and should be removed
+Math.tryDiv(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#61-66) is never used and should be removed
+Math.tryMod(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#71-76) is never used and should be removed
+Math.tryMul(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#46-56) is never used and should be removed
+Math.trySub(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#36-41) is never used and should be removed
+Math.unsignedRoundsUp(Math.Rounding) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#412-414) is never used and should be removed
+SafeERC20._callOptionalReturnBool(IERC20,bytes) (lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol#110-117) is never used and should be removed
+SafeERC20.forceApprove(IERC20,address,uint256) (lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol#76-83) is never used and should be removed
+SafeERC20.safeDecreaseAllowance(IERC20,address,uint256) (lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol#61-69) is never used and should be removed
+SafeERC20.safeIncreaseAllowance(IERC20,address,uint256) (lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol#52-55) is never used and should be removed
+SignedMath.abs(int256) (lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol#37-42) is never used and should be removed
+SignedMath.average(int256,int256) (lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol#28-32) is never used and should be removed
+SignedMath.max(int256,int256) (lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol#13-15) is never used and should be removed
+SignedMath.min(int256,int256) (lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol#20-22) is never used and should be removed
+Strings.equal(string,string) (lib/openzeppelin-contracts/contracts/utils/Strings.sol#91-93) is never used and should be removed
+Strings.toHexString(address) (lib/openzeppelin-contracts/contracts/utils/Strings.sol#84-86) is never used and should be removed
+Strings.toHexString(uint256) (lib/openzeppelin-contracts/contracts/utils/Strings.sol#56-60) is never used and should be removed
+Strings.toHexString(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/Strings.sol#65-78) is never used and should be removed
+Strings.toStringSigned(int256) (lib/openzeppelin-contracts/contracts/utils/Strings.sol#49-51) is never used and should be removed
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#dead-code
+INFO:Detectors:
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/access/Ownable.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol#3) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC721/IERC721.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/utils/Address.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/utils/Context.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/utils/Pausable.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/utils/Strings.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.20 (lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol#4) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version0.8.20 (src/GreenStaker.sol#2) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version0.8.20 (src/TemplateERC20.sol#2) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version0.8.20 (src/WithdrawalNFT.sol#2) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+solc-0.8.20 is not recommended for deployment
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#incorrect-versions-of-solidity
+INFO:Detectors:
+Low level call in SafeERC20._callOptionalReturnBool(IERC20,bytes) (lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol#110-117):
+        - (success,returndata) = address(token).call(data) (lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol#115)
+Low level call in Address.sendValue(address,uint256) (lib/openzeppelin-contracts/contracts/utils/Address.sol#41-50):
+        - (success) = recipient.call{value: amount}() (lib/openzeppelin-contracts/contracts/utils/Address.sol#46)
+Low level call in Address.functionCallWithValue(address,bytes,uint256) (lib/openzeppelin-contracts/contracts/utils/Address.sol#83-89):
+        - (success,returndata) = target.call{value: value}(data) (lib/openzeppelin-contracts/contracts/utils/Address.sol#87)
+Low level call in Address.functionStaticCall(address,bytes) (lib/openzeppelin-contracts/contracts/utils/Address.sol#95-98):
+        - (success,returndata) = target.staticcall(data) (lib/openzeppelin-contracts/contracts/utils/Address.sol#96)
+Low level call in Address.functionDelegateCall(address,bytes) (lib/openzeppelin-contracts/contracts/utils/Address.sol#104-107):
+        - (success,returndata) = target.delegatecall(data) (lib/openzeppelin-contracts/contracts/utils/Address.sol#105)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#low-level-calls
+INFO:Detectors:
+Function IERC20Permit.DOMAIN_SEPARATOR() (lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol#89) is not in mixedCase
+Parameter GreenStaker.setAdmin(address,bool)._userAddress (src/GreenStaker.sol#108) is not in mixedCase
+Parameter GreenStaker.setAdmin(address,bool)._isAdmin (src/GreenStaker.sol#108) is not in mixedCase
+Parameter GreenStaker.setTokenWhitelist(address,bool)._tokenAddress (src/GreenStaker.sol#117) is not in mixedCase
+Parameter GreenStaker.setTokenWhitelist(address,bool)._isWhitelisted (src/GreenStaker.sol#117) is not in mixedCase
+Parameter GreenStaker.adminYieldDeposit(address,uint256)._tokenAddress (src/GreenStaker.sol#126) is not in mixedCase
+Parameter GreenStaker.adminYieldDeposit(address,uint256)._amount (src/GreenStaker.sol#126) is not in mixedCase
+Parameter GreenStaker.adminModifyNoticePeriod(uint8,uint256)._noticePeriodId (src/GreenStaker.sol#139) is not in mixedCase
+Parameter GreenStaker.adminModifyNoticePeriod(uint8,uint256)._newNoticePeriod (src/GreenStaker.sol#139) is not in mixedCase
+Parameter GreenStaker.deposit(address,uint256,uint8)._tokenAddress (src/GreenStaker.sol#149) is not in mixedCase
+Parameter GreenStaker.deposit(address,uint256,uint8)._amount (src/GreenStaker.sol#149) is not in mixedCase
+Parameter GreenStaker.deposit(address,uint256,uint8)._noticePeriodId (src/GreenStaker.sol#149) is not in mixedCase
+Parameter GreenStaker.getUserReward(GreenStaker.UserInfo)._user (src/GreenStaker.sol#168) is not in mixedCase
+Parameter GreenStaker.requestWithdraw(address)._tokenAddress (src/GreenStaker.sol#178) is not in mixedCase
+Parameter GreenStaker.isAllowedToClaim(uint256,uint8)._requestedWithdrawDate (src/GreenStaker.sol#199) is not in mixedCase
+Parameter GreenStaker.isAllowedToClaim(uint256,uint8)._noticePeriodId (src/GreenStaker.sol#199) is not in mixedCase
+Parameter GreenStaker.claim(address)._tokenAddress (src/GreenStaker.sol#207) is not in mixedCase
+Parameter GreenStaker.balanceOf(address,address)._tokenAddress (src/GreenStaker.sol#230) is not in mixedCase
+Parameter GreenStaker.balanceOf(address,address)._userAddress (src/GreenStaker.sol#230) is not in mixedCase
+Parameter GreenStaker.getRewardTokenInfo(address)._tokenAddress (src/GreenStaker.sol#238) is not in mixedCase
+Parameter GreenStaker.getUserInfo(address,address)._tokenAddress (src/GreenStaker.sol#247) is not in mixedCase
+Parameter GreenStaker.getUserInfo(address,address)._userAddress (src/GreenStaker.sol#247) is not in mixedCase
+Parameter GreenStaker.getNoticePeriodInfo(uint8)._noticePeriodId (src/GreenStaker.sol#255) is not in mixedCase
+Parameter GreenStaker.isAdmin(address)._userAddress (src/GreenStaker.sol#263) is not in mixedCase
+Parameter TemplateERC20.burn(address,uint256)._address (src/TemplateERC20.sol#11) is not in mixedCase
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#conformance-to-solidity-naming-conventions
+INFO:Detectors:
+GreenStaker.pausedAt (src/GreenStaker.sol#63) is never used in GreenStaker (src/GreenStaker.sol#12-266)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unused-state-variable
+INFO:Detectors:
+GreenStaker.pausedAt (src/GreenStaker.sol#63) should be constant 
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#state-variables-that-could-be-declared-constant
+INFO:Detectors:
+GreenStaker.withdrawalNFT (src/GreenStaker.sol#64) should be immutable 
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#state-variables-that-could-be-declared-immutable
+INFO:Slither:src/GreenStaker.sol analyzed (24 contracts with 93 detectors), 122 result(s) found
